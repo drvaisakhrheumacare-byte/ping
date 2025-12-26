@@ -1,113 +1,66 @@
-# app.py - minimal Streamlit viewer for Main Server per centre
+import os
+import json
+import tempfile
 import streamlit as st
 import gspread
-import pandas as pd
-from datetime import datetime, timezone, timedelta
-from dateutil import parser
-import os, json, tempfile
 
-# CONFIG
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c/edit"
-CHECK_SHEET = "ServerCheck"
-USERS_SHEET = "Users"
-IST = timezone(timedelta(hours=5, minutes=30))
-FAIL_THRESHOLD = 5
+# Config
+SHEET_URL = st.secrets.get("sheet_url", os.environ.get("SHEET_URL", "https://docs.google.com/spreadsheets/d/1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c/edit"))
 
-# If running on Streamlit Cloud, write service account JSON from secrets to a temp file
-if "gcp_service_account" in st.secrets:
-    sa_json = st.secrets["gcp_service_account"]
-    # st.secrets stores strings; if you uploaded JSON text, use it directly
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
-    tmp.write(sa_json.encode("utf-8"))
-    tmp.flush()
-    tmp.close()
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
+def ensure_credentials_file():
+    """
+    Ensure GOOGLE_APPLICATION_CREDENTIALS points to a valid JSON file.
+    Priority:
+      1. If env var GOOGLE_APPLICATION_CREDENTIALS points to an existing file, use it.
+      2. If st.secrets['gcp_service_account'] exists, write it to a temp file and set env var.
+      3. If credentials.json exists in repo root (local dev), use it (but .gitignore prevents committing).
+    """
+    env_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if env_path and os.path.isfile(env_path):
+        return env_path
 
-CRED = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", r"D:\dev\Serverlog\credentials.json")
+    # 2) Streamlit secret
+    if "gcp_service_account" in st.secrets:
+        json_text = st.secrets["gcp_service_account"]
+        # write to a temp file
+        fd, path = tempfile.mkstemp(prefix="gcp_creds_", suffix=".json")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(json_text)
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = path
+        return path
 
-def auth():
-    return gspread.service_account(filename=CRED)
+    # 3) Local credentials.json
+    local_path = os.path.join(os.getcwd(), "credentials.json")
+    if os.path.isfile(local_path):
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_path
+        return local_path
 
-def read_df(gc, name):
-    sh = gc.open_by_url(SHEET_URL)
-    ws = sh.worksheet(name)
-    vals = ws.get_all_values()
-    if not vals: return pd.DataFrame()
-    return pd.DataFrame(vals[1:], columns=vals[0])
+    return None
 
-def parse_ts(v):
-    if v is None or v=="":
-        return None
+def test_gs_access(creds_path):
     try:
-        if isinstance(v,(int,float)) or (isinstance(v,str) and v.replace('.','',1).isdigit()):
-            s = float(v)
-            ms = (s - 25569) * 86400 * 1000
-            return datetime.utcfromtimestamp(ms/1000.0).replace(tzinfo=timezone.utc).astimezone(IST)
-    except: pass
-    try:
-        d = parser.parse(v)
-        if d.tzinfo is None:
-            d = d.replace(tzinfo=timezone.utc).astimezone(IST)
-        else:
-            d = d.astimezone(IST)
-        return d
-    except:
-        return None
+        gc = gspread.service_account(filename=creds_path)
+        sh = gc.open_by_url(SHEET_URL)
+        worksheets = [ws.title for ws in sh.worksheets()]
+        return True, sh.title, worksheets
+    except Exception as e:
+        return False, type(e).__name__ + ": " + str(e), None
 
-st.title("Simple Ping Monitor")
+def main():
+    st.title("Server Logger - Auth Check")
+    creds_path = ensure_credentials_file()
+    if not creds_path:
+        st.error("No credentials found. Locally place credentials.json or add the JSON to Streamlit secret 'gcp_service_account'.")
+        st.stop()
 
-try:
-    gc = auth()
-except Exception as e:
-    st.error("Auth failed. Ensure credentials are available and the sheet is shared with the service account.")
-    st.stop()
+    st.info(f"Using credentials file: {creds_path}")
+    ok, info, worksheets = test_gs_access(creds_path)
+    if ok:
+        st.success(f"Opened spreadsheet: {info}")
+        st.write("Worksheets:", worksheets)
+    else:
+        st.error("Auth failed. See details below.")
+        st.code(info)
 
-df_users = read_df(gc, USERS_SHEET)
-users = {}
-if not df_users.empty:
-    df_users.columns = [c.strip() for c in df_users.columns]
-    for _, r in df_users.iterrows():
-        users[str(r.get("Username","")).strip()] = str(r.get("Password","")).strip()
-
-st.sidebar.header("Login")
-u = st.sidebar.text_input("Username")
-p = st.sidebar.text_input("Password", type="password")
-if not (u in users and users[u]==p):
-    st.info("Sign in with Users sheet credentials")
-    st.stop()
-
-df = read_df(gc, CHECK_SHEET)
-if df.empty:
-    st.warning("No data in ServerCheck")
-    st.stop()
-
-df.columns = [c.strip() for c in df.columns]
-df['TS_parsed'] = df['Timestamp'].apply(parse_ts)
-df = df.dropna(subset=['TS_parsed']).sort_values('TS_parsed')
-
-latest = df.groupby(['Centre','Server Name']).last().reset_index()
-centres = sorted(latest['Centre'].unique())
-sel = st.selectbox("Centre", centres)
-row = latest[(latest['Centre']==sel) & (latest['Server Name']=="Main Server")]
-if row.empty:
-    st.warning("No Main Server for this centre")
-else:
-    r = row.iloc[0]
-    st.subheader(f"{sel} — Main Server")
-    st.write("**Status:**", r.get('Status','N/A'))
-    st.write("**IP:**", r.get('Server IP','N/A'))
-    st.write("**Ping (ms):**", r.get('ResponseTime(ms)','N/A'))
-    ts = r['TS_parsed']
-    st.write("**Last check (IST):**", ts.strftime("%Y-%m-%d %H:%M:%S") if ts else "N/A")
-
-    hist = df[(df['Centre']==sel) & (df['Server Name']=="Main Server")][['TS_parsed','Status']]
-    consec = 0
-    last_offline = None
-    for _,h in hist.iterrows():
-        if str(h['Status']).lower() in ('failed','fail','down','offline'):
-            consec += 1
-            if consec >= FAIL_THRESHOLD:
-                last_offline = h['TS_parsed']
-        else:
-            consec = 0
-    st.write("**Last Offline (threshold 5):**", last_offline.strftime("%Y-%m-%d %H:%M:%S") if last_offline else "None")
+if __name__ == "__main__":
+    main()
