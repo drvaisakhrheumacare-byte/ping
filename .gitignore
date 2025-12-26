@@ -1,6 +1,13 @@
+# Ignore local credentials and keys
 credentials.json
+*.key
+*.pem
+
+# Python / venv
 .venv/
+env/
 __pycache__/
 *.pyc
-*.log
-.vscode/
+
+# Streamlit local secrets (if accidentally created)
+.streamlit/secrets.toml
