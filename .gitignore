@@ -1,0 +1,14 @@
+# Ignore service account keys
+*.json
+
+# Ignore local data files
+*.csv
+*.xlsx
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore Streamlit local state
+.streamlit/
