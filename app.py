@@ -23,7 +23,7 @@ def load_users():
     ws = client.open_by_key(SHEET_ID).worksheet(USERS_TAB)
     data = ws.get_all_records()
     df = pd.DataFrame(data)
-    df.columns = df.columns.str.strip()  # strip spaces from headers
+    df.columns = df.columns.str.strip()
     return df
 
 @st.cache_data(ttl=15)
@@ -155,9 +155,9 @@ else:
         return "🔴" if s in ("failed", "down", "error") else "🟢"
     display = all_servers.copy()
     if "Status" in display.columns:
-        display["OK"] = display["Status"].apply(status_badge)
-    cols_to_show = [c for c in ["OK", "Centre", "Server Name", "Server IP", "ResponseTime(ms)", "Status", "Timestamp"] if c in display.columns or c == "OK"]
-    st.dataframe(display[cols_to_show].rename(columns={"OK": "Status"}), use_container_width=True)
+        display["Status"] = display["Status"].apply(status_badge)  # overwrite Status with emoji
+    cols_to_show = [c for c in ["Centre", "Server Name", "Server IP", "ResponseTime(ms)", "Status", "Timestamp"] if c in display.columns]
+    st.dataframe(display[cols_to_show], use_container_width=True)
 
 # Footer controls
 st.markdown("---")
