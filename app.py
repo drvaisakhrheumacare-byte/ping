@@ -104,7 +104,7 @@ if not st.session_state.logged_in:
                 st.session_state.username = username
                 st.session_state.centres = get_user_centres(users_df, username)
                 st.session_state.current_index = 0
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Invalid password")
     st.stop()
@@ -166,23 +166,23 @@ with f1:
     if st.button("Back"):
         st.session_state.current_index = max(0, st.session_state.current_index - 1)
         st.session_state.mode = "tiles"
-        st.experimental_rerun()
+        st.rerun()
 with f2:
     if st.session_state.mode == "tiles":
         if st.button("Consolidated Dashboard"):
             st.session_state.mode = "list"
-            st.experimental_rerun()
+            st.rerun()
     else:
         if st.button("Back to Tiles"):
             st.session_state.mode = "tiles"
-            st.experimental_rerun()
+            st.rerun()
 with f3:
     if st.button("Next"):
         st.session_state.current_index = min(len(centres) - 1, st.session_state.current_index + 1)
         st.session_state.mode = "tiles"
-        st.experimental_rerun()
+        st.rerun()
 
 # Sidebar refresh
 st.sidebar.markdown("### Refresh")
 if st.sidebar.button("Refresh now"):
-    st.experimental_rerun()
+    st.rerun()
