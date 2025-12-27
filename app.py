@@ -35,6 +35,7 @@ def load_servers():
 
 # === Helpers ===
 def get_user_row(users_df, username):
+    # Match against the "Username" column (capital U)
     row = users_df[users_df["Username"] == username]
     return row.iloc[0] if not row.empty else None
 
