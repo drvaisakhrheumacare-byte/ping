@@ -1,0 +1,3 @@
+username,password,centres
+alice,alicepass,CenterA;CenterB
+bob,bobpass,CenterC
