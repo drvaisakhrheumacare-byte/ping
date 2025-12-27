@@ -5,8 +5,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 # === Google Sheets setup ===
 SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"  # your sheet ID
-USERS_TAB = "Users"          # exact tab name for users
-SERVERS_TAB = "ServerStatus" # exact tab name for server status
+USERS_TAB = "aaa"             # renamed tab for users
+SERVERS_TAB = "ServerStatus"  # tab name for server status
 
 # Load credentials from Streamlit secrets
 creds_dict = st.secrets["gcp_service_account"]
@@ -86,8 +86,8 @@ except Exception as e:
     st.error("Error loading data from Google Sheets. " + str(e))
     st.stop()
 
-# Debug: show loaded users (remove later)
-# st.write(users_df.head())
+# Debug: show loaded users (remove later once confirmed)
+st.write("Loaded users:", users_df.head())
 
 # === Login screen ===
 if not st.session_state.logged_in:
