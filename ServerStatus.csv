@@ -1,0 +1,3 @@
+Centre,Server Name,Server IP,ResponseTime(ms),Status,Timestamp
+CenterA,web1,10.0.0.1,120,success,2025-12-27 18:00:00
+CenterA,db1,10.0.0.2,0,failed,2025-12-27 18:05:00
