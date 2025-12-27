@@ -1,35 +1,48 @@
 import streamlit as st
 import pandas as pd
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-# === CONFIG: raw GitHub CSV URLs ===
-USERS_CSV_URL = "https://raw.githubusercontent.com/drvaisakhrheumacare-byte/ping/main/Users.csv"
-SERVERS_CSV_URL = "https://raw.githubusercontent.com/drvaisakhrheumacare-byte/ping/main/ServerStatus.csv"
+# === Google Sheets setup ===
+SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"  # your sheet ID
+USERS_TAB = "Users"          # tab name for users
+SERVERS_TAB = "ServerStatus" # tab name for server status
 
-# === Loaders with caching ===
+# Load credentials from Streamlit secrets
+creds_dict = st.secrets["gcp_service_account"]
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+client = gspread.authorize(creds)
+
+# === Loaders ===
 @st.cache_data(ttl=30)
 def load_users():
-    df = pd.read_csv(USERS_CSV_URL, dtype=str).fillna("")
-    df.columns = [c.strip() for c in df.columns]
-    return df
+    ws = client.open_by_key(SHEET_ID).worksheet(USERS_TAB)
+    data = ws.get_all_records()
+    return pd.DataFrame(data)
 
 @st.cache_data(ttl=15)
 def load_servers():
-    df = pd.read_csv(SERVERS_CSV_URL, dtype=str).fillna("")
-    df.columns = [c.strip() for c in df.columns]
+    ws = client.open_by_key(SHEET_ID).worksheet(SERVERS_TAB)
+    data = ws.get_all_records()
+    df = pd.DataFrame(data)
     if "Status" in df.columns:
         df["Status"] = df["Status"].str.lower().str.strip()
     return df
 
 # === Helpers ===
 def get_user_row(users_df, username):
-    row = users_df[users_df["username"] == username]
+    row = users_df[users_df["Username"] == username]
     return row.iloc[0] if not row.empty else None
 
 def get_user_centres(users_df, username):
     row = get_user_row(users_df, username)
     if row is None:
         return []
-    centres = str(row["centres"])
+    centres = str(row["Centres"])
     return [c.strip() for c in centres.split(";") if c.strip()]
 
 def tile_html(server):
@@ -60,14 +73,14 @@ if "centres" not in st.session_state:
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 if "mode" not in st.session_state:
-    st.session_state.mode = "tiles"  # or "list"
+    st.session_state.mode = "tiles"
 
 # === Load data ===
 try:
     users_df = load_users()
     servers_df = load_servers()
 except Exception as e:
-    st.error("Error loading data from GitHub. " + str(e))
+    st.error("Error loading data from Google Sheets. " + str(e))
     st.stop()
 
 # === Login screen ===
@@ -82,7 +95,7 @@ if not st.session_state.logged_in:
         if row is None:
             st.error("Unknown user")
         else:
-            stored_pw = str(row["password"]).strip()
+            stored_pw = str(row["Password"]).strip()
             if password == stored_pw:
                 st.session_state.logged_in = True
                 st.session_state.username = username
