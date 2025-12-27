@@ -86,9 +86,6 @@ except Exception as e:
     st.error("Error loading data from Google Sheets. " + str(e))
     st.stop()
 
-# Debug: show loaded users (remove later once confirmed)
-st.write("Loaded users:", users_df.head())
-
 # === Login screen ===
 if not st.session_state.logged_in:
     st.title("Login")
