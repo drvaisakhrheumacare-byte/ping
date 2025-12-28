@@ -44,40 +44,70 @@ def get_user_centres(users_df, username):
     return centres
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="Server Monitoring", page_icon="🖥️")
+st.set_page_config(page_title="Server Monitoring", page_icon="🖥️", layout="wide")
+
+# Add logo at the top
+st.image(
+    "https://github.com/drvaisakhrheumacare-byte/clinic-ops-app/blob/main/logo.png?raw=true",
+    width=200
+)
+
 st.title("🖥️ Server Monitoring Dashboard")
 
-username = st.text_input("Username")
-password = st.text_input("Password", type="password")
+# --- Login state ---
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-if st.button("Login"):
-    if username in users_df["Username"].values:
-        row = users_df.loc[users_df["Username"] == username].iloc[0]
-        if password == str(row["Password"]).strip():
-            st.success(f"Welcome {row['Name']}!")
+if not st.session_state.logged_in:
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
 
-            user_centre = get_user_centres(users_df, username)
-
-            if user_centre.lower() == "all":
-                filtered_servers = servers_df
+    if st.button("Login"):
+        if username in users_df["Username"].values:
+            row = users_df.loc[users_df["Username"] == username].iloc[0]
+            if password == str(row["Password"]).strip():
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.success(f"Welcome {row['Name']}!")
             else:
-                user_centres = [c.strip() for c in user_centre.split(",") if c.strip()]
-                filtered_servers = servers_df[servers_df["Centre"].isin(user_centres)]
-
-            if filtered_servers.empty:
-                st.error(f"No servers found for centres: {user_centre}")
-            else:
-                st.write(f"Showing servers for centres: {user_centre}")
-
-                def color_status(val):
-                    if str(val).lower() == "success":
-                        return "background-color: lightgreen"
-                    elif str(val).lower() == "failed":
-                        return "background-color: lightcoral"
-                    else:
-                        return ""
-                st.dataframe(filtered_servers.style.applymap(color_status, subset=["Status"]))
+                st.error("Incorrect password")
         else:
-            st.error("Incorrect password")
+            st.error("Username not found")
+
+else:
+    # --- Dashboard after login ---
+    username = st.session_state.username
+    row = users_df.loc[users_df["Username"] == username].iloc[0]
+    user_centre = get_user_centres(users_df, username)
+
+    if user_centre.lower() == "all":
+        filtered_servers = servers_df
     else:
-        st.error("Username not found")
+        user_centres = [c.strip() for c in user_centre.split(",") if c.strip()]
+        filtered_servers = servers_df[servers_df["Centre"].isin(user_centres)]
+
+    if filtered_servers.empty:
+        st.error(f"No servers found for centres: {user_centre}")
+    else:
+        st.write(f"Showing servers for centres: {user_centre}")
+
+        # --- Custom order of display ---
+        order = ["Main", "Backup", "Bitvoice Gateway", "Bitvoice Server"]
+
+        def color_status(val):
+            if str(val).lower() == "success":
+                return "background-color: lightgreen"
+            elif str(val).lower() == "failed":
+                return "background-color: lightcoral"
+            else:
+                return ""
+
+        # Show each category as a separate subtable (mobile friendly)
+        for category in order:
+            subset = filtered_servers[filtered_servers["ServerType"] == category]
+            if not subset.empty:
+                st.subheader(f"{category} Servers")
+                st.dataframe(
+                    subset.style.applymap(color_status, subset=["Status"]),
+                    use_container_width=True
+                )
