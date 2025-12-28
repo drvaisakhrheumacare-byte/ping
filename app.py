@@ -139,13 +139,13 @@ if st.session_state.logged_in:
 
         st.write(f"Showing servers for centres (ordered): {', '.join(centre_order)}")
 
+        # ✅ Enforce the exact column sequence you wanted
         display_cols = [
             "Centre",
-            "Server Name",
-            "Server IP",
-            "ResponseTime(ms)",
             "Status",
             "Timestamp",
+            "ResponseTime(ms)",
+            "Server IP",
             "Last Online"
         ]
 
@@ -157,9 +157,12 @@ if st.session_state.logged_in:
             subset["__order__"] = subset["Centre"].map(lambda c: centre_index.get(c, float("inf")))
             subset = subset.sort_values("__order__", kind="stable").drop(columns="__order__")
 
+            # Ensure all required columns exist
             for col in display_cols:
                 if col not in subset.columns:
                     subset[col] = ""
+
+            # Reorder columns exactly as requested
             subset = subset[display_cols]
 
             st.subheader(f"{category}")
