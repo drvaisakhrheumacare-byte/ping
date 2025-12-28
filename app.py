@@ -87,6 +87,13 @@ if st.session_state.logged_in:
         user_centres = [c.strip() for c in user_centre.split(",") if c.strip()]
         filtered_servers = servers_df[servers_df["Centre"].isin(user_centres)]
 
+        # enforce custom order of centres from user tab
+        filtered_servers["Centre"] = pd.Categorical(
+            filtered_servers["Centre"],
+            categories=user_centres,
+            ordered=True
+        )
+
     if filtered_servers.empty:
         st.error(f"No servers found for centres: {user_centre}")
     else:
@@ -99,7 +106,9 @@ if st.session_state.logged_in:
             categories=order,
             ordered=True
         )
-        filtered_servers = filtered_servers.sort_values("Server Name")
+
+        # sort by Centre order first, then Server Name order
+        filtered_servers = filtered_servers.sort_values(["Centre", "Server Name"])
 
         def color_status(val):
             if str(val).lower() == "success":
