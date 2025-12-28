@@ -4,9 +4,9 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # === Google Sheets setup ===
-SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"
-USERS_TAB = "aaa"
-SERVERS_TAB = "ServerStatus"
+SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"  # your sheet ID
+USERS_TAB = "aaa"             # tab for users
+SERVERS_TAB = "ServerStatus"  # tab for server status
 
 # --- Load credentials from Streamlit secrets ---
 creds_dict = st.secrets["gcp_service_account"]
@@ -37,22 +37,28 @@ def load_servers():
 users_df = load_users()
 servers_df = load_servers()
 
+# --- Helper function ---
 def get_user_centres(users_df, username):
     row = users_df.loc[users_df["Username"] == username].iloc[0]
     centres = str(row["Centre"]).strip()
     return centres
 
+# --- Streamlit UI ---
 st.set_page_config(page_title="Server Monitoring", page_icon="🖥️", layout="wide")
 
+# Add logo at the top
 st.image(
     "https://github.com/drvaisakhrheumacare-byte/clinic-ops-app/blob/main/logo.png?raw=true",
     width=200
 )
+
 st.title("🖥️ Server Monitoring Dashboard")
 
+# --- Login state ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
+# Show login form only if not logged in
 if not st.session_state.logged_in:
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
@@ -63,12 +69,13 @@ if not st.session_state.logged_in:
             if password == str(row["Password"]).strip():
                 st.session_state.logged_in = True
                 st.session_state.username = username
-                # no rerun call — dashboard will render immediately
+                st.rerun()   # rerun immediately so dashboard loads
             else:
                 st.error("Incorrect password")
         else:
             st.error("Username not found")
 
+# Show dashboard only if logged in
 if st.session_state.logged_in:
     username = st.session_state.username
     row = users_df.loc[users_df["Username"] == username].iloc[0]
@@ -85,6 +92,7 @@ if st.session_state.logged_in:
     else:
         st.write(f"Showing servers for centres: {user_centre}")
 
+        # --- Custom order of display based on Server Name ---
         order = ["Main Server", "Backup Server", "Bitvoice Gateway", "Bitvoice Server"]
         filtered_servers["Server Name"] = pd.Categorical(
             filtered_servers["Server Name"],
@@ -101,6 +109,7 @@ if st.session_state.logged_in:
             else:
                 return ""
 
+        # --- Show each category separately (mobile friendly) ---
         display_cols = ["Centre", "Status", "Timestamp", "ResponseTime(ms)", "Server IP"]
 
         for category in order:
