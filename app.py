@@ -11,20 +11,20 @@ scope = [
 creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
 client = gspread.authorize(creds)
 
-# --- Google Sheet IDs (replace with your actual IDs) ---
+# --- Google Sheet IDs ---
+# Replace with your actual sheet IDs
 USERS_SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"     # Users sheet
 SERVERS_SHEET_ID = "1z3GnmXOaouQH6Z0ZG59b8AftTTuL0gc5cgcAKHUqPiY"   # ServerStatus sheet
 
-# --- Load data from Google Sheets ---
-users_ws = client.open_by_key(USERS_SHEET_ID).sheet1   # first tab of Users sheet
-servers_ws = client.open_by_key(SERVERS_SHEET_ID).sheet1   # first tab of Servers sheet
+# --- Load worksheets by tab name ---
+users_ws = client.open_by_key(USERS_SHEET_ID).worksheet("Users")          # tab name must match
+servers_ws = client.open_by_key(SERVERS_SHEET_ID).worksheet("ServerStatus")
 
 users_df = pd.DataFrame(users_ws.get_all_records())
 servers_df = pd.DataFrame(servers_ws.get_all_records())
 
 # --- Helper function ---
 def get_user_centres(users_df, username):
-    """Return the centres string for a given user."""
     row = users_df.loc[users_df["Username"] == username].iloc[0]
     centres = str(row["Centre"]).strip()
     return centres
@@ -33,7 +33,6 @@ def get_user_centres(users_df, username):
 st.set_page_config(page_title="Server Monitoring", page_icon="🖥️")
 st.title("🖥️ Server Monitoring Dashboard")
 
-# --- Login ---
 username = st.text_input("Username")
 password = st.text_input("Password", type="password")
 
@@ -43,7 +42,6 @@ if st.button("Login"):
         if password == str(row["Password"]).strip():
             st.success(f"Welcome {row['Name']}!")
 
-            # --- Get centres for this user ---
             user_centre = get_user_centres(users_df, username)
 
             if user_centre.lower() == "all":
@@ -57,7 +55,6 @@ if st.button("Login"):
             else:
                 st.write(f"Showing servers for centres: {user_centre}")
 
-                # Highlight status with colors
                 def color_status(val):
                     if str(val).lower() == "success":
                         return "background-color: lightgreen"
@@ -66,7 +63,6 @@ if st.button("Login"):
                     else:
                         return ""
                 st.dataframe(filtered_servers.style.applymap(color_status, subset=["Status"]))
-
         else:
             st.error("Incorrect password")
     else:
