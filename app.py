@@ -1,29 +1,14 @@
 import streamlit as st
 import pandas as pd
-import re
 
-# --- Google Sheet URLs ---
-# Replace with your actual published sheet links
-USERS_SHEET_URL = "https://docs.google.com/spreadsheets/d/<USERS_SHEET_ID>/edit?gid=<TAB_ID>"
-SERVERS_SHEET_URL = "https://docs.google.com/spreadsheets/d/<SERVERS_SHEET_ID>/edit?gid=<TAB_ID>"
-
-def get_csv_export_url(sheet_url):
-    """Convert a Google Sheet URL into a CSV export link."""
-    sheet_id_match = re.search(r'/d/([a-zA-Z0-9-_]+)', sheet_url)
-    if not sheet_id_match:
-        return None
-    sheet_id = sheet_id_match.group(1)
-
-    gid = "0"
-    gid_match = re.search(r'[#&?]gid=([0-9]+)', sheet_url)
-    if gid_match:
-        gid = gid_match.group(1)
-
-    return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+# --- Google Sheets CSV export links ---
+# Replace with your actual export links (note: /export?format=csv&gid=...)
+USERS_CSV = "https://docs.google.com/spreadsheets/d/1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c/export?format=csv&gid=2042131011"
+SERVERS_CSV = "https://docs.google.com/spreadsheets/d/1z3GnmXOaouQH6Z0ZG59b8AftTTuL0gc5cgcAKHUqPiY/export?format=csv&gid=0"
 
 # --- Load data directly from Google Sheets ---
-users_df = pd.read_csv(get_csv_export_url(USERS_SHEET_URL))
-servers_df = pd.read_csv(get_csv_export_url(SERVERS_SHEET_URL))
+users_df = pd.read_csv(USERS_CSV)
+servers_df = pd.read_csv(SERVERS_CSV)
 
 # --- Helper function ---
 def get_user_centres(users_df, username):
@@ -59,6 +44,7 @@ if st.button("Login"):
                 st.error(f"No servers found for centres: {user_centre}")
             else:
                 st.write(f"Showing servers for centres: {user_centre}")
+
                 # Highlight status with colors
                 def color_status(val):
                     if str(val).lower() == "success":
