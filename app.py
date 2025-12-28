@@ -31,6 +31,7 @@ def load_servers():
     ws = client.open_by_key(SHEET_ID).worksheet(SERVERS_TAB)
     data = ws.get_all_records()
     df = pd.DataFrame(data)
+    # normalize headers
     df.columns = df.columns.str.strip()
     return df
 
@@ -128,7 +129,15 @@ if st.session_state.logged_in:
         st.write(f"Showing servers for centres (ordered): {', '.join(centre_order)}")
 
         # Now ServerStatus already has Last Online column
-        display_cols = ["Centre", "Server Name", "Server IP", "ResponseTime(ms)", "Status", "Timestamp", "Last Online"]
+        display_cols = [
+            "Centre",
+            "Server Name",
+            "Server IP",
+            "ResponseTime(ms)",
+            "Status",
+            "Timestamp",
+            "Last Online"
+        ]
 
         for category in server_type_order:
             subset = filtered_servers[filtered_servers["Server Name"] == category].copy()
