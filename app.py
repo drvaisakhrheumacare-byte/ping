@@ -4,10 +4,10 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # === Google Sheets setup ===
-SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"  # your sheet ID
-USERS_TAB = "aaa"             # tab for users
-SERVERS_TAB = "ServerStatus"  # tab for server status
-SERVERCHECK_TAB = "ServerCheck"  # tab for server check history
+SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"
+USERS_TAB = "aaa"
+SERVERS_TAB = "ServerStatus"
+SERVERCHECK_TAB = "ServerCheck"
 
 # --- Load credentials from Streamlit secrets ---
 creds_dict = st.secrets["gcp_service_account"]
@@ -66,12 +66,10 @@ def get_user_centres(users_df, username):
 # --- Streamlit UI ---
 st.set_page_config(page_title="Server Monitoring", page_icon="🖥️", layout="wide")
 
-# Add logo at the top
 st.image(
     "https://github.com/drvaisakhrheumacare-byte/clinic-ops-app/blob/main/logo.png?raw=true",
     width=200
 )
-
 st.title("🖥️ Server Monitoring Dashboard")
 
 # --- Login state ---
@@ -98,11 +96,14 @@ if st.session_state.logged_in:
     username = st.session_state.username
     row = users_df.loc[users_df["Username"] == username].iloc[0]
 
+    # Normalize keys
     servers_df["Centre"] = servers_df["Centre"].apply(normalize_centre)
+    servers_df["Server Name"] = servers_df["Server Name"].str.strip()
     servercheck_df["Centre"] = servercheck_df["Centre"].apply(normalize_centre)
     servercheck_df["Server Name"] = servercheck_df["Server Name"].str.strip()
     servercheck_df["Timestamp"] = pd.to_datetime(servercheck_df["Timestamp"], errors="coerce")
 
+    # Get user centres
     user_centres_list = get_user_centres(users_df, username)
     is_all = len(user_centres_list) == 1 and user_centres_list[0] == "ALL"
 
@@ -129,7 +130,7 @@ if st.session_state.logged_in:
             .groupby(["Centre", "Server Name"])["Timestamp"]
             .last()
             .reset_index()
-            .rename(columns={"Timestamp": "Last Success"})
+            .rename(columns={"Timestamp": "Last Online"})   # 👈 renamed here
         )
 
         # Merge into filtered_servers
@@ -159,7 +160,7 @@ if st.session_state.logged_in:
 
         st.write(f"Showing servers for centres (ordered): {', '.join(centre_order)}")
 
-        display_cols = ["Centre", "Status", "Timestamp", "ResponseTime(ms)", "Server IP", "Last Success"]
+        display_cols = ["Centre", "Status", "Timestamp", "ResponseTime(ms)", "Server IP", "Last Online"]
 
         for category in server_type_order:
             subset = filtered_servers[filtered_servers["Server Name"] == category].copy()
