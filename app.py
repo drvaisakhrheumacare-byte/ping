@@ -68,7 +68,7 @@ if not st.session_state.logged_in:
             if password == str(row["Password"]).strip():
                 st.session_state.logged_in = True
                 st.session_state.username = username
-                st.experimental_rerun()   # 🔑 force rerun so dashboard loads immediately
+                st.rerun()   # 🔑 force rerun so dashboard loads immediately
             else:
                 st.error("Incorrect password")
         else:
