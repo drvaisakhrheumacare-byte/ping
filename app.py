@@ -1,19 +1,35 @@
 import streamlit as st
 import pandas as pd
+import re
 
-# --- File paths (adjust if needed) ---
-USERS_FILE = "aaa.csv"            # Users tab CSV
-SERVERS_FILE = "ServerStatus.csv" # Servers status CSV
+# --- Google Sheet URLs ---
+# Replace with your actual published sheet links
+USERS_SHEET_URL = "https://docs.google.com/spreadsheets/d/<USERS_SHEET_ID>/edit?gid=<TAB_ID>"
+SERVERS_SHEET_URL = "https://docs.google.com/spreadsheets/d/<SERVERS_SHEET_ID>/edit?gid=<TAB_ID>"
 
-# --- Load data ---
-users_df = pd.read_csv(USERS_FILE)
-servers_df = pd.read_csv(SERVERS_FILE)
+def get_csv_export_url(sheet_url):
+    """Convert a Google Sheet URL into a CSV export link."""
+    sheet_id_match = re.search(r'/d/([a-zA-Z0-9-_]+)', sheet_url)
+    if not sheet_id_match:
+        return None
+    sheet_id = sheet_id_match.group(1)
+
+    gid = "0"
+    gid_match = re.search(r'[#&?]gid=([0-9]+)', sheet_url)
+    if gid_match:
+        gid = gid_match.group(1)
+
+    return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+
+# --- Load data directly from Google Sheets ---
+users_df = pd.read_csv(get_csv_export_url(USERS_SHEET_URL))
+servers_df = pd.read_csv(get_csv_export_url(SERVERS_SHEET_URL))
 
 # --- Helper function ---
 def get_user_centres(users_df, username):
     """Return the centres string for a given user."""
     row = users_df.loc[users_df["Username"] == username].iloc[0]
-    centres = str(row["Centre"]).strip()   # ✅ correct column name
+    centres = str(row["Centre"]).strip()
     return centres
 
 # --- Streamlit UI ---
