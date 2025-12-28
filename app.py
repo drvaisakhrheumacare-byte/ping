@@ -61,28 +61,17 @@ st.set_page_config(page_title="Server Monitoring", page_icon="🖥️", layout="
 # --- Auto refresh every 60 seconds ---
 st_autorefresh(interval=60 * 1000, key="datarefresh")
 
-# --- CSS to pin refresh button top-right ---
-st.markdown("""
-    <style>
-    .top-right {
-        position: fixed;
-        top: 10px;
-        right: 20px;
-        z-index: 100;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# --- Top bar with logo on left and refresh button on right ---
+col1, col2 = st.columns([4,1])
+with col1:
+    st.image(
+        "https://github.com/drvaisakhrheumacare-byte/clinic-ops-app/blob/main/logo.png?raw=true",
+        width=200
+    )
+with col2:
+    if st.button("🔄 Refresh", key="refresh"):
+        st.rerun()
 
-# --- Refresh button pinned top-right ---
-refresh = st.button("🔄 Refresh", key="refresh", help="Click to reload data")
-if refresh:
-    st.rerun()
-
-# Logo and title
-st.image(
-    "https://github.com/drvaisakhrheumacare-byte/clinic-ops-app/blob/main/logo.png?raw=true",
-    width=200
-)
 st.title("🖥️ Server Monitoring Dashboard")
 
 # --- Login state ---
