@@ -7,7 +7,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"
 USERS_TAB = "aaa"
 SERVERS_TAB = "ServerStatus"
-SERVERCHECK_TAB = "ServerCheck"
 
 # --- Load credentials from Streamlit secrets ---
 creds_dict = st.secrets["gcp_service_account"]
@@ -35,17 +34,8 @@ def load_servers():
     df.columns = df.columns.str.strip()
     return df
 
-@st.cache_data(ttl=30)
-def load_servercheck():
-    ws = client.open_by_key(SHEET_ID).worksheet(SERVERCHECK_TAB)
-    data = ws.get_all_records()
-    df = pd.DataFrame(data)
-    df.columns = df.columns.str.strip()
-    return df
-
 users_df = load_users()
 servers_df = load_servers()
-servercheck_df = load_servercheck()
 
 # --- Helpers ---
 def normalize_centre(s):
@@ -96,14 +86,9 @@ if st.session_state.logged_in:
     username = st.session_state.username
     row = users_df.loc[users_df["Username"] == username].iloc[0]
 
-    # Normalize keys
     servers_df["Centre"] = servers_df["Centre"].apply(normalize_centre)
     servers_df["Server Name"] = servers_df["Server Name"].str.strip()
-    servercheck_df["Centre"] = servercheck_df["Centre"].apply(normalize_centre)
-    servercheck_df["Server Name"] = servercheck_df["Server Name"].str.strip()
-    servercheck_df["Timestamp"] = pd.to_datetime(servercheck_df["Timestamp"], errors="coerce")
 
-    # Get user centres
     user_centres_list = get_user_centres(users_df, username)
     is_all = len(user_centres_list) == 1 and user_centres_list[0] == "ALL"
 
@@ -123,24 +108,6 @@ if st.session_state.logged_in:
     if filtered_servers.empty:
         st.error(f"No servers found for centres: {', '.join(centre_order)}")
     else:
-        # Compute last success per (Centre, Server Name)
-        last_success = (
-            servercheck_df[servercheck_df["Status"].str.lower() == "success"]
-            .sort_values("Timestamp")
-            .groupby(["Centre", "Server Name"])["Timestamp"]
-            .last()
-            .reset_index()
-            .rename(columns={"Timestamp": "Last Online"})   # 👈 renamed here
-        )
-
-        # Merge into filtered_servers
-        filtered_servers = pd.merge(
-            filtered_servers,
-            last_success,
-            on=["Centre", "Server Name"],
-            how="left"
-        )
-
         def color_status(val):
             v = str(val).strip().lower()
             if v == "success":
@@ -160,7 +127,8 @@ if st.session_state.logged_in:
 
         st.write(f"Showing servers for centres (ordered): {', '.join(centre_order)}")
 
-        display_cols = ["Centre", "Status", "Timestamp", "ResponseTime(ms)", "Server IP", "Last Online"]
+        # Now ServerStatus already has Last Online column
+        display_cols = ["Centre", "Server Name", "Server IP", "ResponseTime(ms)", "Status", "Timestamp", "Last Online"]
 
         for category in server_type_order:
             subset = filtered_servers[filtered_servers["Server Name"] == category].copy()
