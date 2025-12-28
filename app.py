@@ -1,14 +1,26 @@
 import streamlit as st
 import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 
-# --- Google Sheets CSV export links ---
-# Replace with your actual export links (note: /export?format=csv&gid=...)
-USERS_CSV = "https://docs.google.com/spreadsheets/d/1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c/export?format=csv&gid=2042131011"
-SERVERS_CSV = "https://docs.google.com/spreadsheets/d/1z3GnmXOaouQH6Z0ZG59b8AftTTuL0gc5cgcAKHUqPiY/export?format=csv&gid=0"
+# --- Authenticate with Google using secrets.toml ---
+scope = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+client = gspread.authorize(creds)
 
-# --- Load data directly from Google Sheets ---
-users_df = pd.read_csv(USERS_CSV)
-servers_df = pd.read_csv(SERVERS_CSV)
+# --- Google Sheet IDs (replace with your actual IDs) ---
+USERS_SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"     # Users sheet
+SERVERS_SHEET_ID = "1z3GnmXOaouQH6Z0ZG59b8AftTTuL0gc5cgcAKHUqPiY"   # ServerStatus sheet
+
+# --- Load data from Google Sheets ---
+users_ws = client.open_by_key(USERS_SHEET_ID).sheet1   # first tab of Users sheet
+servers_ws = client.open_by_key(SERVERS_SHEET_ID).sheet1   # first tab of Servers sheet
+
+users_df = pd.DataFrame(users_ws.get_all_records())
+servers_df = pd.DataFrame(servers_ws.get_all_records())
 
 # --- Helper function ---
 def get_user_centres(users_df, username):
