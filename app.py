@@ -109,10 +109,15 @@ else:
                 return ""
 
         # --- Show each category separately (mobile friendly) ---
+        display_cols = ["Centre", "Status", "Timestamp", "ResponseTime(ms)", "Server IP"]
+
         for category in order:
             subset = filtered_servers[filtered_servers["Server Name"] == category]
             if not subset.empty:
                 st.subheader(f"{category}")
+                # Reorder columns
+                subset = subset[display_cols]
+
                 st.dataframe(
                     subset.style.applymap(color_status, subset=["Status"]),
                     use_container_width=True
