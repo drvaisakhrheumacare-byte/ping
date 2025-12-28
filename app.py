@@ -61,14 +61,14 @@ st.set_page_config(page_title="Server Monitoring", page_icon="🖥️", layout="
 # --- Auto refresh every 60 seconds ---
 st_autorefresh(interval=60 * 1000, key="datarefresh")
 
-# --- Top bar with logo on left and refresh button on right ---
-col1, col2 = st.columns([4,1])
-with col1:
+# --- Top bar: logo left, refresh button right ---
+top_left, top_right = st.columns([6,1])
+with top_left:
     st.image(
         "https://github.com/drvaisakhrheumacare-byte/clinic-ops-app/blob/main/logo.png?raw=true",
         width=200
     )
-with col2:
+with top_right:
     if st.button("🔄 Refresh", key="refresh"):
         st.rerun()
 
