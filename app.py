@@ -91,8 +91,14 @@ else:
     else:
         st.write(f"Showing servers for centres: {user_centre}")
 
-        # --- Custom order of display ---
-        order = ["Main", "Backup", "Bitvoice Gateway", "Bitvoice Server"]
+        # --- Custom order of display based on Server Name ---
+        order = ["Main Server", "Backup Server", "Bitvoice Gateway", "Bitvoice Server"]
+        filtered_servers["Server Name"] = pd.Categorical(
+            filtered_servers["Server Name"],
+            categories=order,
+            ordered=True
+        )
+        filtered_servers = filtered_servers.sort_values("Server Name")
 
         def color_status(val):
             if str(val).lower() == "success":
@@ -102,11 +108,11 @@ else:
             else:
                 return ""
 
-        # Show each category as a separate subtable (mobile friendly)
+        # --- Show each category separately (mobile friendly) ---
         for category in order:
-            subset = filtered_servers[filtered_servers["ServerType"] == category]
+            subset = filtered_servers[filtered_servers["Server Name"] == category]
             if not subset.empty:
-                st.subheader(f"{category} Servers")
+                st.subheader(f"{category}")
                 st.dataframe(
                     subset.style.applymap(color_status, subset=["Status"]),
                     use_container_width=True
