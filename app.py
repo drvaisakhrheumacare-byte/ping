@@ -12,13 +12,23 @@ creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"],
 client = gspread.authorize(creds)
 
 # --- Google Sheet IDs ---
-# Replace with your actual sheet IDs
 USERS_SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"     # Users sheet
 SERVERS_SHEET_ID = "1z3GnmXOaouQH6Z0ZG59b8AftTTuL0gc5cgcAKHUqPiY"   # ServerStatus sheet
 
-# --- Load worksheets by tab name ---
-users_ws = client.open_by_key(USERS_SHEET_ID).worksheet("Users")          # tab name must match
-servers_ws = client.open_by_key(SERVERS_SHEET_ID).worksheet("ServerStatus")
+# --- List available tabs dynamically ---
+users_sh = client.open_by_key(USERS_SHEET_ID)
+servers_sh = client.open_by_key(SERVERS_SHEET_ID)
+
+user_tabs = [ws.title for ws in users_sh.worksheets()]
+server_tabs = [ws.title for ws in servers_sh.worksheets()]
+
+st.sidebar.header("⚙️ Configuration")
+selected_user_tab = st.sidebar.selectbox("Select Users tab", user_tabs)
+selected_server_tab = st.sidebar.selectbox("Select Servers tab", server_tabs)
+
+# --- Load chosen tabs ---
+users_ws = users_sh.worksheet(selected_user_tab)
+servers_ws = servers_sh.worksheet(selected_server_tab)
 
 users_df = pd.DataFrame(users_ws.get_all_records())
 servers_df = pd.DataFrame(servers_ws.get_all_records())
