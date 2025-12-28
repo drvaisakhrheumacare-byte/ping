@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from streamlit_autorefresh import st_autorefresh
 
 # === Google Sheets setup ===
 SHEET_ID = "1uf4pqKHEAbw6ny7CVZZVMw23PTfmv0QZzdCyj4fU33c"
@@ -57,6 +58,27 @@ def get_user_centres(users_df, username):
 # --- Streamlit UI ---
 st.set_page_config(page_title="Server Monitoring", page_icon="🖥️", layout="wide")
 
+# --- Auto refresh every 60 seconds ---
+st_autorefresh(interval=60 * 1000, key="datarefresh")
+
+# --- CSS to pin refresh button top-right ---
+st.markdown("""
+    <style>
+    .top-right {
+        position: fixed;
+        top: 10px;
+        right: 20px;
+        z-index: 100;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Refresh button pinned top-right ---
+refresh = st.button("🔄 Refresh", key="refresh", help="Click to reload data")
+if refresh:
+    st.rerun()
+
+# Logo and title
 st.image(
     "https://github.com/drvaisakhrheumacare-byte/clinic-ops-app/blob/main/logo.png?raw=true",
     width=200
@@ -128,7 +150,6 @@ if st.session_state.logged_in:
 
         st.write(f"Showing servers for centres (ordered): {', '.join(centre_order)}")
 
-        # Now ServerStatus already has Last Online column
         display_cols = [
             "Centre",
             "Server Name",
